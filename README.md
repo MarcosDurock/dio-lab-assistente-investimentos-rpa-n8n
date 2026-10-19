@@ -62,3 +62,6 @@ Python (Requests + BeautifulSoup) (RPA e Scraping)
 OpenAI API (GPT) (Geração de texto personalizada)
 Gmail API (Disparo de e-mails via OAuth2)
 ngrok (Túnel reverso para Webhook)
+
+📹 Demonstração do Projeto
+Vídeo demonstrativo: (https://drive.google.com/file/d/1stw6GDZTky5jcBZ6C5X3FrV1mdedYdj4/view?usp=sharing)
