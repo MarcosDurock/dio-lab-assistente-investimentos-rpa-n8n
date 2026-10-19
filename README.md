@@ -61,5 +61,10 @@ OpenAI API (GPT) (Geração de texto personalizada)
 Gmail API (Disparo de e-mails via OAuth2)
 ngrok (Túnel reverso para Webhook)
 
-📹 Demonstração do Projeto
-Vídeo demonstrativo: Assista ao vídeo no Google Drive
+endpoint público seguro para rotear o webhook sem expor portas locais.
+
+---
+
+## 📹 Demonstração do Projeto
+
+- **Vídeo demonstrativo:** [Clique aqui para assistir no Google Drive](https://drive.google.com/file/d/1stw6GDZTky5jcBZ6C5X3FrV1mdedYdj4/view?usp=sharing)
