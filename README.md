@@ -33,11 +33,9 @@ Automatizar a leitura de uma base de clientes com diferentes perfis e volumes de
              ↓ (True)
      [ Gmail API: Disparo Final ]
 
+----
 
----
-
-## Decisões Técnicas e Boas Práticas
-
+🧠 Decisões Técnicas e Boas Práticas
 1. RPA com BeautifulSoup e Requisição Webhook
 Por quê? A extração tabular com BeautifulSoup permitiu tratar e limpar os dados de clientes diretamente da página web estática, encapsulando-os em um payload JSON limpo enviado via requests.post.
 
@@ -64,4 +62,4 @@ Gmail API (Disparo de e-mails via OAuth2)
 ngrok (Túnel reverso para Webhook)
 
 📹 Demonstração do Projeto
-Vídeo demonstrativo: (https://drive.google.com/file/d/1stw6GDZTky5jcBZ6C5X3FrV1mdedYdj4/view?usp=sharing)
+Vídeo demonstrativo: Assista ao vídeo no Google Drive
