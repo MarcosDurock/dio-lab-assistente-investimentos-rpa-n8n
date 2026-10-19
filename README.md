@@ -36,7 +36,8 @@ Automatizar a leitura de uma base de clientes com diferentes perfis e volumes de
 
 ---
 
-Decisões Técnicas e Boas Práticas
+## Decisões Técnicas e Boas Práticas
+
 1. RPA com BeautifulSoup e Requisição Webhook
 Por quê? A extração tabular com BeautifulSoup permitiu tratar e limpar os dados de clientes diretamente da página web estática, encapsulando-os em um payload JSON limpo enviado via requests.post.
 
