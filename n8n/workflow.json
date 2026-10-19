@@ -1,0 +1,347 @@
+{
+  "name": "RPA com PYTHON",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clientes",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "5808590f-0ebe-4a7b-8f05-c0f3a4450060",
+      "name": "Coletar informações do Colab",
+      "webhookId": "74c909c4-49cc-4a38-8b23-067eabb4e7e2"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json}}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2416,
+        -16
+      ],
+      "id": "7037f61c-9b17-47e5-8faf-c9ddf87ef67c",
+      "name": "Retornar informações do Colab para edição"
+    },
+    {
+      "parameters": {
+        "url": "https://digitalinnovationone.github.io/dio-lab-assistente-investimentos-rpa-n8n/data.csv",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        208,
+        0
+      ],
+      "id": "2bb80241-3fb8-4cec-bfc9-e2029ec39355",
+      "name": "JSON investidor"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pega todos os itens que a LLM gerou\nconst items = $input.all();\n\n// Pega os itens da tabela de clientes usando o nome EXATO do nó que vimos no print\nconst clientesTabela = $(\"Converte resultado  em tabela para LLM\").all();\n\nreturn items.map((itemObj, index) => {\n  const item = itemObj.json;\n  \n  // Pega o cliente correspondente na tabela pelo número da linha (index)\n  const cliente = clientesTabela[index]?.json ?? {};\n\n  // 1. Extrai o texto da OpenAI\n  const textoGerado = item.output?.[0]?.content?.[0]?.text\n                   ?? item.content?.[0]?.text\n                   ?? item.message?.content\n                   ?? item.text\n                   ?? \"\";\n\n  // 2. Extrai o Assunto e o Corpo\n  let assunto = \"Oportunidade de Investimento Personalizada\";\n  let corpoTexto = textoGerado;\n\n  const matchAssunto = textoGerado.match(/Assunto:\\s*(.+)/i);\n  if (matchAssunto) {\n    assunto = matchAssunto[1].trim();\n    corpoTexto = textoGerado.replace(/Assunto:\\s*.+(\\r?\\n)+/i, \"\").trim();\n  }\n\n  const corpoHtml = corpoTexto.replace(/\\n/g, \"<br>\");\n\n  return {\n    json: {\n      to: cliente.email || \"\",\n      nome: cliente.nome || \"\",\n      subject: assunto,\n      messageText: corpoTexto,\n      messageHtml: corpoHtml\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1712,
+        0
+      ],
+      "id": "75e40a3d-0d1d-4beb-9314-d148226d806a",
+      "name": "Code in JavaScript3"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pega o CSV como texto vindo do HTTP Request\nconst csvRaw = $json.data ?? $json.body ?? $json;\nconst text = (typeof csvRaw === \"string\") ? csvRaw : json.stringify(csvRaw);\n\nconst lines = text.split(/\\r?\\n/).map(l => l.trim()).filter(Boolean);\nconst headers = lines[0].split(\",\").map(h => h.trim());\n\nconst investimentos = lines.slice(1).map(line => {\n  const cols = line.split(\",\").map(c => c.trim());\n  const obj = {};\n  headers.forEach((h, i) => {\n    obj[h] = cols[i] ?? \"\";\n  });\n\n  // normaliza minimo para numero\n  obj.minimo = Number(String(obj.minimo).replace(/[^\\d]/g, \"\")) || 0;\n\n  return obj;\n});\n\nreturn [{ json: { investimentos } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        0
+      ],
+      "id": "541f7119-7c74-4c8d-9210-bf179a54986f",
+      "name": "Lista Tipo de Perfil"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        656,
+        -144
+      ],
+      "id": "622b7488-e026-4488-b795-23d065762e20",
+      "name": "Combina Clientes com Tipo de Perfil"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Atue como especialista em investimentos. Escreva um e-mail curto, direto e amigável em português do Brasil (pt-BR) apresentando uma opção de investimento ao cliente.\n\nDados do cliente:\n- Nome: {{ $json.nome }}\n- Perfil: {{ $json.perfil }}\n- Saldo disponível: {{ $json.saldo }}\n- Produto sugerido: {{ $json.produtoSugerido }}\n- Rentabilidade de referência: {{ $json.rentabilidade }}\n\nRegras obrigatórias:\n1. Máximo de 2 a 3 parágrafos curtos.\n2. Formato:\n   Assunto: [Assunto atraente]\n   \n   [Corpo do e-mail]\n3. Jamais prometa ganhos certos, lucros futuros ou garantias de retorno. Trate a rentabilidade apenas como referência ou estimativa de mercado.\n4. Linguagem clara, sem jargões complexos e com foco em planejamento financeiro.\n5. Finalize convidando para tirar dúvidas ou agendar uma conversa.\n\n"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        1328,
+        0
+      ],
+      "id": "d4c2ebe8-7b32-40d8-8083-e96f7806f720",
+      "name": "LLM gera mensagem personalizada",
+      "credentials": {
+        "openAiApi": {
+          "id": "eexcUtF9dICN8SR4",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pega os dados que vieram do nó anterior\nconst item = $input.first().json;\n\n// Pega a lista de recomendações (ou lista vazia se não encontrar)\nconst lista = item.recomendacoes ?? [];\n\n// Transforma cada cliente em um item individual (formato de tabela do n8n)\nreturn lista.map(cliente => {\n  return {\n    json: {\n      nome: cliente.nome,\n      email: cliente.email,\n      perfil: cliente.perfil,\n      saldo: cliente.saldo,\n      produtoSugerido: cliente.produtoSugerido,\n      rentabilidade: cliente.rentabilidade,\n      mensagemBase: cliente.mensagem\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "a8e9f581-5dd3-4c67-9f14-9629ea087746",
+      "name": "Converte resultado  em tabela para LLM"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Pega os clientes e os investimentos que vieram do Merge\nconst dados = $input.first().json;\nconst clientes = dados.body?.clientes ?? dados.clientes ?? [];\nconst investimentos = dados.investimentos ?? [];\n\n// 2. Para cada cliente, vamos encontrar o investimento ideal e montar a mensagem\nconst recomendacoes = clientes.map(cliente => {\n  // Procura um investimento que tenha o mesmo perfil do cliente\n  const investimentoRecomendado = investimentos.find(\n    inv => inv.perfil?.toLowerCase() === cliente.perfil?.toLowerCase()\n  );\n\n  const produto = investimentoRecomendado?.produto ?? \"Investimento Diversificado\";\n  const rentabilidade = investimentoRecomendado?.rentabilidade ?? \"Consulte nossos especialistas\";\n\n  // Monta a mensagem personalizada\n  const mensagem = `Olá, ${cliente.nome}! Identificamos que o seu perfil de investidor é ${cliente.perfil}. Com base no seu saldo de ${cliente.saldo}, recomendamos a aplicação em \"${produto}\" (Rentabilidade estimada: ${rentabilidade}).`;\n\n  return {\n    nome: cliente.nome,\n    email: cliente.email,\n    perfil: cliente.perfil,\n    saldo: cliente.saldo,\n    produtoSugerido: produto,\n    rentabilidade: rentabilidade,\n    mensagem: mensagem\n  };\n});\n\n// 3. Retorna a lista no formato que o n8n e o Respond to Webhook esperam\nreturn [{ json: { recomendacoes } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        864,
+        0
+      ],
+      "id": "e20d97e5-6640-4f2d-a905-aa8ce996210c",
+      "name": "Combina Cliente+Perfil+Msg"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.messageHtml }}",
+        "options": {
+          "ccList": "ingles.tradutor@gmail.com, anisa.teste@gmail.com"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2176,
+        -16
+      ],
+      "id": "79d39700-3c02-4966-b481-4b83de21a47b",
+      "name": "Send a message",
+      "webhookId": "db2b764f-c62c-4b59-a717-2b3112e33ffd",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "BrR3dRgH7aIimKo6",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "38137c0f-afdc-40c6-9583-ae490a363498",
+              "leftValue": "={{ $json.to }}",
+              "rightValue": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1936,
+        0
+      ],
+      "id": "b5f7c7e3-24e7-475a-a7de-bc54f9b27134",
+      "name": "If"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Coletar informações do Colab": {
+      "main": [
+        [
+          {
+            "node": "JSON investidor",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Combina Clientes com Tipo de Perfil",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retornar informações do Colab para edição": {
+      "main": [
+        []
+      ]
+    },
+    "JSON investidor": {
+      "main": [
+        [
+          {
+            "node": "Lista Tipo de Perfil",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript3": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lista Tipo de Perfil": {
+      "main": [
+        [
+          {
+            "node": "Combina Clientes com Tipo de Perfil",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Combina Clientes com Tipo de Perfil": {
+      "main": [
+        [
+          {
+            "node": "Combina Cliente+Perfil+Msg",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM gera mensagem personalizada": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Converte resultado  em tabela para LLM": {
+      "main": [
+        [
+          {
+            "node": "LLM gera mensagem personalizada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combina Cliente+Perfil+Msg": {
+      "main": [
+        [
+          {
+            "node": "Converte resultado  em tabela para LLM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Retornar informações do Colab para edição",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "c6627178-9c25-4e58-a61d-8df87f5aa599",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7422bf603f299b12b000472ef113cb158b17171cb948ea437924dc6e3e29eeb2"
+  },
+  "nodeGroups": [],
+  "id": "ShBcUogcwgv5r7hE",
+  "tags": []
+}
